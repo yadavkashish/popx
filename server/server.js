@@ -31,7 +31,9 @@ app.use(express.json());
 
 // All routes starting with /api/auth will be handled by authRoutes
 app.use('/api/auth', authRoutes);
-
+app.get('/', (req, res) => {
+  res.json({ msg: 'Welcome to the authentication API' });
+});
 // ==============================
 // Database Connection and Server Start
 // ==============================

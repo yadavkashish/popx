@@ -10,9 +10,7 @@ const router = express.Router();
 // @desc    Register a new user
 // @access  Public
 // ==============================
-router.get('/', (req, res) => {
-  res.json({ msg: 'Welcome to the authentication API' });
-});
+
 router.post('/register', async (req, res) => {
   const { fullName, phone, email, password, company, isAgency } = req.body;
 
