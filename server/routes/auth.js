@@ -1,7 +1,7 @@
 const express = require('express');
-const bcrypt = require('bcryptjs'); // For hashing passwords
-const jwt = require('jsonwebtoken'); // For generating JWT tokens
-const User = require('../models/User'); // Mongoose User model
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -10,21 +10,24 @@ const router = express.Router();
 // @desc    Register a new user
 // @access  Public
 // ==============================
-
 router.post('/register', async (req, res) => {
-  const { fullName, phone, email, password, company, isAgency } = req.body;
+  let { fullName, phone, email, password, company, isAgency } = req.body;
 
   try {
-    // Check if the user already exists
+    // Normalize input
+    email = email.trim().toLowerCase();
+    password = password.trim();
+
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ msg: 'Email already registered' });
     }
 
-    // Hash the user's password before saving
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new user instance
+    // Save the user
     const newUser = new User({
       fullName,
       phone,
@@ -34,13 +37,11 @@ router.post('/register', async (req, res) => {
       isAgency,
     });
 
-    // Save the user to the database
     await newUser.save();
-
-    // Respond with success
+    console.log('✅ User registered:', email);
     res.status(201).json({ msg: 'User created successfully' });
   } catch (err) {
-    // Internal server error
+    console.error('❌ Registration error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -51,27 +52,38 @@ router.post('/register', async (req, res) => {
 // @access  Public
 // ==============================
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
 
   try {
-    // Find user by email
+    // Normalize input
+    email = email.trim().toLowerCase();
+    password = password.trim();
+
+    console.log('⚡ Login attempt:', email);
+
     const user = await User.findOne({ email });
+
     if (!user) {
+      console.log('❌ User not found in DB');
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // Compare provided password with hashed password
+    console.log('🔎 User found:', user.email);
+    console.log('🧾 Hashed password from DB:', user.password);
+    console.log('🔐 Entered password:', password);
+
+    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('✅ Password match:', isMatch);
+
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // Create a JWT token with user ID and 1-day expiration
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: '1d',
     });
 
-    // Respond with token and limited user info
     res.json({
       token,
       user: {
@@ -81,7 +93,20 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (err) {
-    // Internal server error
+    console.error('❌ Login error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================
+// @route   GET /api/auth/test-users
+// @desc    List all users (debug only)
+// ==============================
+router.get('/test-users', async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
